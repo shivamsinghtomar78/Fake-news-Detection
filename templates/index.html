@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fake News Detection System</title>
+    <style>
+        /* Core styles from previous version remain... */
+        :root {
+            --gradient-primary: linear-gradient(135deg, #6B73FF 0%, #000DFF 100%);
+            --gradient-secondary: linear-gradient(135deg, #FF6B6B 0%, #FF0000 100%);
+            --primary-color: #4A55FF;
+            --secondary-color: #FF5757;
+            --background-color: #F0F2F5;
+            --card-background: rgba(255, 255, 255, 0.95);
+            --text-primary: #2D3436;
+            --text-secondary: #636E72;
+            --success-color: #00B894;
+            --error-color: #FF7675;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        /* Animated Background */
+        body {
+            min-height: 100vh;
+            background: var(--background-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+            color: var(--text-primary);
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before, body::after {
+            content: '';
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: var(--gradient-primary);
+            opacity: 0.1;
+            animation: float 20s infinite;
+            z-index: -1;
+        }
+
+        body::before {
+            top: -100px;
+            left: -100px;
+            animation-delay: -5s;
+        }
+
+        body::after {
+            bottom: -100px;
+            right: -100px;
+            background: var(--gradient-secondary);
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(50px, 50px) scale(1.1); }
+            50% { transform: translate(0, 100px) scale(1); }
+            75% { transform: translate(-50px, 50px) scale(0.9); }
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: var(--card-background);
+            padding: 2.5rem;
+            border-radius: 24px;
+            box-shadow: var(--shadow-lg);
+            backdrop-filter: blur(10px);
+            animation: slideUp 0.8s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 1rem;
+            animation: gradientFlow 8s linear infinite;
+        }
+
+        @keyframes gradientFlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .form-group {
+            opacity: 0;
+            transform: translateX(-20px);
+            animation: slideIn 0.5s ease-out forwards;
+        }
+
+        .form-group:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        @keyframes slideIn {
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 1rem 1.2rem;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            font-size: 1.1rem;
+            transition: var(--transition);
+            background: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(74, 85, 255, 0.15);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(74, 85, 255, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(74, 85, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(74, 85, 255, 0); }
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 1.2rem;
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .submit-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 300%;
+            height: 300%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%) rotate(45deg);
+            animation: buttonShine 3s infinite;
+        }
+
+        @keyframes buttonShine {
+            0% { transform: translate(-50%, -50%) rotate(45deg) translateY(100%); }
+            100% { transform: translate(-50%, -50%) rotate(45deg) translateY(-100%); }
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(74, 85, 255, 0.1);
+            border-left-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .result {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            border-radius: 12px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            text-align: center;
+            animation: fadeInScale 0.5s ease-out;
+        }
+
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .result.real {
+            background: linear-gradient(135deg, #00B894 0%, #00D1A0 100%);
+            color: white;
+            animation: slideInRight 0.5s ease-out;
+        }
+
+        .result.fake {
+            background: linear-gradient(135deg, #FF7675 0%, #FF4757 100%);
+            color: white;
+            animation: slideInLeft 0.5s ease-out;
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes slideInLeft {
+            from { transform: translateX(-100px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .footer {
+            opacity: 0;
+            animation: fadeIn 0.5s ease-out forwards;
+            animation-delay: 1s;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Fake News Detector</h1>
+            <p>Enter the news details below to verify its authenticity</p>
+        </div>
+
+        <div class="form-container">
+            <form action="{{ url_for('predict') }}" method="post" id="news-form">
+                <div class="form-group">
+                    <label for="author">Article Author</label>
+                    <input type="text" id="author" name="author" required 
+                           placeholder="Enter the author's name">
+                </div>
+
+                <div class="form-group">
+                    <label for="title">Article Title</label>
+                    <input type="text" id="title" name="title" required 
+                           placeholder="Enter the complete news title">
+                </div>
+
+                <button type="submit" class="submit-btn">Verify News</button>
+            </form>
+        </div>
+
+        <div class="loading">
+            <div class="loading-spinner"></div>
+            <p>Analyzing article...</p>
+        </div>
+
+        {% if prediction_text %}
+        <div class="result {% if 'FAKE' in prediction_text %}fake{% else %}real{% endif %}">
+            {{ prediction_text }}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="footer">
+        <p> Fake News Detection System |by using Machine Learning</p>
+    </div>
+
+    <script>
+        document.getElementById('news-form').addEventListener('submit', function() {
+            document.querySelector('.loading').style.display = 'block';
+            document.querySelector('.result')?.classList.add('hidden');
+        });
+
+        // Add ripple effect to button
+        document.querySelector('.submit-btn').addEventListener('click', function(e) {
+            let ripple = document.createElement('span');
+            ripple.classList.add('ripple');
+            this.appendChild(ripple);
+            let x = e.clientX - e.target.offsetLeft;
+            let y = e.clientY - e.target.offsetTop;
+            ripple.style.left = x + 'px';
+            ripple.style.top = y + 'px';
+            setTimeout(() => ripple.remove(), 1000);
+        });
+    </script>
+</body>
+</html>
