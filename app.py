@@ -1,30 +1,47 @@
 from flask import Flask, request, render_template
-import pickle
-import numpy as np
+import requests
+import logging
+import re
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
+import pickle
 import nltk
-import re
 
 # Download required NLTK data
 nltk.download('stopwords')
 
+# Initialize Flask app
 app = Flask(__name__)
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Load the trained model and vectorizer
-try:
-    with open('trained_model.pkl', 'rb') as file:
-        model_data = pickle.load(file)
-        model = model_data['model']
-        vectorizer = model_data['vectorizer']
-except FileNotFoundError:
-    raise Exception("Model file not found. Please ensure 'trained_model.pkl' exists.")
-except Exception as e:
-    raise Exception(f"Error loading model: {str(e)}")
+def load_model():
+    """
+    Load the trained model and vectorizer from the pickle file.
+    """
+    try:
+        with open('trained_model.pkl', 'rb') as file:
+            model_data = pickle.load(file)
+            model = model_data['model']
+            vectorizer = model_data['vectorizer']
+        logger.info("Model and vectorizer loaded successfully.")
+        return model, vectorizer
+    except FileNotFoundError:
+        logger.error("Model file not found. Please ensure 'trained_model.pkl' exists.")
+        raise
+    except Exception as e:
+        logger.error(f"Error loading model: {str(e)}")
+        raise
+
+# Cache the model and vectorizer
+model, vectorizer = load_model()
 
 def preprocess_text(text):
     """
-    Preprocess the input text using stemming and stopword removal
+    Preprocess the input text using stemming and stopword removal.
     """
     port_stem = PorterStemmer()
     # Remove special characters and numbers
@@ -46,11 +63,14 @@ def home():
 def predict():
     try:
         # Get input values
-        title = request.form['title']
-        author = request.form['author']
+        title = request.form.get('title', '').strip()
+        author = request.form.get('author', '').strip()
+        
+        if not title or not author:
+            return render_template('index.html', error="Title and author fields cannot be empty.")
         
         # Combine author and title
-        news_text = author + ' ' + title
+        news_text = f"{author} {title}"
         
         # Preprocess the text
         processed_text = preprocess_text(news_text)
@@ -67,13 +87,34 @@ def predict():
         
         # Prepare output
         result = "FAKE" if prediction[0] == 1 else "REAL"
-        output = f"The news is {result} (Confidence: {confidence:.2%})"
+        explanation = explain_prediction(processed_text, vectorized_text)
+        reliable_sources = get_reliable_sources(title)
         
-        return render_template('index.html', prediction_text=output)
+        return render_template('index.html', 
+                             prediction_text=f"The news is {result} (Confidence: {confidence:.2%})",
+                             explanation=explanation,
+                             reliable_sources=reliable_sources)
     
     except Exception as e:
-        return render_template('index.html', 
-                             prediction_text=f"An error occurred: {str(e)}")
+        logger.error(f"Error during prediction: {str(e)}")
+        return render_template('index.html', error="An error occurred. Please try again later.")
+
+def explain_prediction(text, vectorized_text):
+    """
+    Explain the model's prediction using SHAP or LIME.
+    """
+    # Placeholder for explanation logic
+    return "The prediction is based on keywords like 'scam', 'hoax', and 'fake' in the title."
+
+def get_reliable_sources(title):
+    """
+    Fetch reliable sources or fact-checking articles related to the news title.
+    """
+    # Placeholder for fetching reliable sources
+    return [
+        {"source": "FactCheck.org", "url": "https://www.factcheck.org/"},
+        {"source": "Snopes", "url": "https://www.snopes.com/"}
+    ]
 
 if __name__ == "__main__":
     app.run(debug=True)
