@@ -9,6 +9,8 @@
         :root {
             --gradient-primary: linear-gradient(135deg, #6B73FF 0%, #000DFF 100%);
             --gradient-secondary: linear-gradient(135deg, #FF6B6B 0%, #FF0000 100%);
+            --gradient-success: linear-gradient(135deg, #00B894 0%, #00D1A0 100%);
+            --gradient-error: linear-gradient(135deg, #FF7675 0%, #FF4757 100%);
             --primary-color: #4A55FF;
             --secondary-color: #FF5757;
             --background-color: #F0F2F5;
@@ -22,6 +24,16 @@
             --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
+        /* Dark Mode Variables */
+        [data-theme="dark"] {
+            --background-color: #1E1E1E;
+            --card-background: rgba(40, 40, 40, 0.95);
+            --text-primary: #FFFFFF;
+            --text-secondary: #B0B0B0;
+            --shadow-sm: 0 2px 8px rgba(255, 255, 255, 0.1);
+            --shadow-lg: 0 8px 24px rgba(255, 255, 255, 0.12);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -29,7 +41,53 @@
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
 
-        /* Animated Background */
+        /* Smooth transitions for theme switching */
+        body {
+            transition: background-color 0.5s ease, color 0.5s ease;
+        }
+
+        .container, .theme-switch label {
+            transition: background-color 0.5s ease, box-shadow 0.5s ease;
+        }
+
+        /* Dark Mode Toggle Switch */
+        .theme-switch {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .theme-switch input[type="checkbox"] {
+            display: none;
+        }
+
+        .theme-switch label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            background: var(--card-background);
+            padding: 8px 12px;
+            border-radius: 24px;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+        }
+
+        .theme-switch label:hover {
+            box-shadow: var(--shadow-lg);
+        }
+
+        .theme-switch label::before {
+            content: '🌙';
+            margin-right: 8px;
+            font-size: 1.2rem;
+        }
+
+        .theme-switch input:checked + label::before {
+            content: '☀️';
+        }
+
+        /* Rest of your existing styles... */
         body {
             min-height: 100vh;
             background: var(--background-color);
@@ -230,13 +288,13 @@
         }
 
         .result.real {
-            background: linear-gradient(135deg, #00B894 0%, #00D1A0 100%);
+            background: var(--gradient-success);
             color: white;
             animation: slideInRight 0.5s ease-out;
         }
 
         .result.fake {
-            background: linear-gradient(135deg, #FF7675 0%, #FF4757 100%);
+            background: var(--gradient-error);
             color: white;
             animation: slideInLeft 0.5s ease-out;
         }
@@ -260,9 +318,23 @@
         @keyframes fadeIn {
             to { opacity: 1; }
         }
+
+        /* Error Message */
+        .error-message {
+            display: none;
+            color: var(--error-color);
+            margin-top: 1rem;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
+    <!-- Dark Mode Toggle Switch -->
+    <div class="theme-switch">
+        <input type="checkbox" id="theme-toggle" aria-label="Toggle dark mode">
+        <label for="theme-toggle" role="switch" aria-checked="false"></label>
+    </div>
+
     <div class="container">
         <div class="header">
             <h1>Fake News Detector</h1>
@@ -270,7 +342,7 @@
         </div>
 
         <div class="form-container">
-            <form action="{{ url_for('predict') }}" method="post" id="news-form">
+            <form action="/predict" method="post" id="news-form">
                 <div class="form-group">
                     <label for="author">Article Author</label>
                     <input type="text" id="author" name="author" required 
@@ -287,15 +359,22 @@
             </form>
         </div>
 
+        <!-- Error Message -->
+        <div class="error-message">
+            Please fill out all fields.
+        </div>
+
+        <!-- Loading Spinner -->
         <div class="loading">
             <div class="loading-spinner"></div>
             <p>Analyzing article...</p>
         </div>
 
+        <!-- Single Prediction Result -->
         {% if prediction_text %}
-        <div class="result {% if 'FAKE' in prediction_text %}fake{% else %}real{% endif %}">
-            {{ prediction_text }}
-        </div>
+            <div class="result {% if 'FAKE' in prediction_text %}fake{% else %}real{% endif %}">
+                {{ prediction_text }}
+            </div>
         {% endif %}
     </div>
 
@@ -304,13 +383,44 @@
     </div>
 
     <script>
-        document.getElementById('news-form').addEventListener('submit', function() {
-            document.querySelector('.loading').style.display = 'block';
-            document.querySelector('.result')?.classList.add('hidden');
+        // Dark Mode Functionality
+        const themeToggle = document.getElementById('theme-toggle');
+        const body = document.body;
+
+        // Load saved theme preference
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            body.setAttribute('data-theme', 'dark');
+            themeToggle.checked = true;
+        }
+
+        // Toggle theme and save preference
+        themeToggle.addEventListener('change', () => {
+            const isDarkMode = themeToggle.checked;
+            body.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
+            localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+            document.querySelector('.theme-switch label').setAttribute('aria-checked', isDarkMode);
         });
 
-        // Add ripple effect to button
-        document.querySelector('.submit-btn').addEventListener('click', function(e) {
+        // Form Submission Handling
+        document.getElementById('news-form').addEventListener('submit', function (e) {
+            const author = document.getElementById('author').value;
+            const title = document.getElementById('title').value;
+            const errorMessage = document.querySelector('.error-message');
+
+            if (!author || !title) {
+                e.preventDefault();
+                errorMessage.style.display = 'block';
+            } else {
+                errorMessage.style.display = 'none';
+                document.querySelector('.loading').style.display = 'block';
+                document.querySelector('.submit-btn').disabled = true;
+                document.querySelector('.submit-btn').textContent = 'Processing...';
+            }
+        });
+
+        // Ripple Effect for Button
+        document.querySelector('.submit-btn').addEventListener('click', function (e) {
             let ripple = document.createElement('span');
             ripple.classList.add('ripple');
             this.appendChild(ripple);
